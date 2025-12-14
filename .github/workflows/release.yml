@@ -30,6 +30,39 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Import code signing certificate
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          # Only import certificate if CSC_LINK is provided
+          if [ -n "$CSC_LINK" ]; then
+            echo "$CSC_LINK" | base64 --decode > certificate.p12
+            security create-keychain -p "" build.keychain || true
+            security default-keychain -s build.keychain
+            security unlock-keychain -p "" build.keychain
+            security import certificate.p12 -k build.keychain -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign || true
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain || true
+            rm certificate.p12
+          fi
+
+      - name: Setup App Store Connect API key
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+        run: |
+          # Only create API key file if both secrets are provided
+          if [ -n "$APPLE_API_KEY" ] && [ -n "$APPLE_API_KEY_ID" ]; then
+            # Create the API key file from secret (could be base64 or direct content)
+            if echo "$APPLE_API_KEY" | base64 -d > /dev/null 2>&1; then
+              echo "$APPLE_API_KEY" | base64 --decode > "AuthKey_${APPLE_API_KEY_ID}.p8"
+            else
+              echo "$APPLE_API_KEY" > "AuthKey_${APPLE_API_KEY_ID}.p8"
+            fi
+            chmod 600 "AuthKey_${APPLE_API_KEY_ID}.p8"
+            echo "APPLE_API_KEY_PATH=$(pwd)/AuthKey_${APPLE_API_KEY_ID}.p8" >> $GITHUB_ENV
+          fi
+
       - name: Build application
         run: |
           echo "Starting build process..."
@@ -53,6 +86,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEBUG: electron-forge:*
           ELECTRON_FORGE_DEBUG: "1"
+          # Code signing environment variables
+          CSC_IDENTITY: ${{ secrets.CSC_IDENTITY }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          # Notarization environment variables (App Store Connect API key method - recommended)
+          APPLE_API_KEY: ${{ env.APPLE_API_KEY_PATH }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          # Alternative notarization method (App-specific password)
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Get version from package.json
         id: get_version
@@ -143,7 +188,10 @@ jobs:
             1. Download the appropriate ZIP file for your Mac
             2. Extract the ZIP file
             3. Move `iHosts.app` to your Applications folder
-            4. Open iHosts from Applications
+            4. If you see a security warning, right-click the app and select "Open", then click "Open" in the dialog
+            5. Open iHosts from Applications
+
+            **Note:** This app is code signed and notarized by Apple. If you encounter any security warnings, please ensure you're downloading from this official release.
           draft: false
           prerelease: false
           files: |
@@ -156,3 +204,12 @@ jobs:
           path: |
             ./out/make/zip/darwin/arm64/*.zip
           retention-days: 30
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          if [ -n "$CSC_LINK" ]; then
+            security delete-keychain build.keychain || true
+          fi
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}

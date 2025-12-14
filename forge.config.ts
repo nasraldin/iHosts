@@ -7,6 +7,42 @@ import { VitePlugin } from "@electron-forge/plugin-vite";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 
+// Helper function to get notarization configuration
+function getNotarizationConfig() {
+  // App-specific password method
+  if (process.env.APPLE_ID && process.env.APPLE_APP_SPECIFIC_PASSWORD) {
+    const config: {
+      appleId: string;
+      appleIdPassword: string;
+      teamId: string;
+    } = {
+      appleId: process.env.APPLE_ID,
+      appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD,
+      teamId: process.env.APPLE_TEAM_ID || "",
+    };
+    // Only return if teamId is provided (required for this method)
+    if (process.env.APPLE_TEAM_ID) {
+      return config;
+    }
+    // If teamId is missing, fall through to API key method or return undefined
+  }
+
+  // App Store Connect API key method (recommended)
+  if (
+    process.env.APPLE_API_KEY &&
+    process.env.APPLE_API_KEY_ID &&
+    process.env.APPLE_API_ISSUER
+  ) {
+    return {
+      appleApiKey: process.env.APPLE_API_KEY,
+      appleApiKeyId: process.env.APPLE_API_KEY_ID,
+      appleApiIssuer: process.env.APPLE_API_ISSUER,
+    };
+  }
+
+  return undefined;
+}
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
@@ -16,6 +52,19 @@ const config: ForgeConfig = {
     appCategoryType: "public.app-category.utilities",
     // macOS specific configuration
     darwinDarkModeSupport: true,
+    // Code signing configuration
+    osxSign: process.env.CSC_IDENTITY
+      ? {
+          identity: process.env.CSC_IDENTITY,
+          optionsForFile: (filePath: string) => {
+            return {
+              entitlements: "entitlements.mac.plist",
+            };
+          },
+        }
+      : undefined,
+    // Notarization configuration
+    osxNotarize: getNotarizationConfig(),
     // This ensures the app name appears correctly in menu bar and dock
     extendInfo: {
       CFBundleName: "iHosts",

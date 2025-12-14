@@ -76,10 +76,8 @@ A modern, elegant macOS Electron application for managing the `/etc/hosts` file 
 
 4. **First Launch**
    - Open iHosts from Applications
-   - macOS may show a security warning (since the app isn't notarized)
-   - Go to **System Preferences > Security & Privacy > General**
-   - Click **"Open Anyway"** next to the blocked message
-   - Or right-click the app and select **"Open"**, then confirm
+   - The app is code signed and notarized by Apple
+   - If you see a security warning, right-click the app and select **"Open"**, then confirm
 
 ### System Requirements
 
@@ -252,6 +250,64 @@ pnpm run make
 
 The built application will be in the `out/` directory.
 
+### Code Signing & Notarization
+
+For distributing the app, you need to code sign and notarize it with Apple. This prevents the "damaged" error when users download the app.
+
+#### Prerequisites
+
+1. **Apple Developer Account** (paid membership required)
+2. **Developer ID Application Certificate** (for code signing)
+3. **App Store Connect API Key** (for notarization - recommended) OR App-specific password
+
+#### Setting up GitHub Secrets
+
+Add these secrets to your GitHub repository (Settings > Secrets and variables > Actions):
+
+**For Code Signing:**
+- `CSC_IDENTITY`: Your Developer ID certificate name (e.g., "Developer ID Application: Your Name (TEAM_ID)")
+- `CSC_LINK`: Base64-encoded .p12 certificate file (export from Keychain Access)
+- `CSC_KEY_PASSWORD`: Password for the .p12 certificate
+
+**For Notarization (App Store Connect API Key - Recommended):**
+- `APPLE_API_KEY`: Path to your .p8 API key file (or base64-encoded content)
+- `APPLE_API_KEY_ID`: Your API key ID (10 characters)
+- `APPLE_API_ISSUER`: Your issuer ID (UUID format)
+
+**Alternative Notarization (App-specific Password):**
+- `APPLE_ID`: Your Apple ID email
+- `APPLE_APP_SPECIFIC_PASSWORD`: App-specific password from appleid.apple.com
+- `APPLE_TEAM_ID`: Your team ID (10 characters)
+
+#### Exporting Certificate for CI
+
+1. Open **Keychain Access** on your Mac
+2. Find your **Developer ID Application** certificate
+3. Right-click and select **Export**
+4. Choose **Personal Information Exchange (.p12)** format
+5. Set a password
+6. Convert to base64 for GitHub secret:
+   ```bash
+   base64 -i certificate.p12 | pbcopy
+   ```
+7. Paste into `CSC_LINK` secret
+
+#### Local Development
+
+For local builds with code signing, set environment variables:
+
+```bash
+export CSC_IDENTITY="Developer ID Application: Your Name (TEAM_ID)"
+export APPLE_API_KEY="path/to/AuthKey_XXXXXXXXXX.p8"
+export APPLE_API_KEY_ID="XXXXXXXXXX"
+export APPLE_API_ISSUER="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+```
+
+Then run:
+```bash
+pnpm run make
+```
+
 ### Code Quality
 
 **Run linter:**
@@ -329,9 +385,11 @@ If changes aren't taking effect:
 
 If macOS blocks the app:
 
-1. Go to **System Preferences > Security & Privacy > General**
-2. Click **"Open Anyway"** if you see a blocked message
-3. Or right-click the app and select **"Open"**, then confirm
+1. Right-click the app and select **"Open"**, then confirm in the dialog
+2. If that doesn't work, go to **System Settings > Privacy & Security**
+3. Scroll down and look for a message about iHosts being blocked
+4. Click **"Open Anyway"** if available
+5. If you downloaded from GitHub Releases, ensure you're using the official release (code signed and notarized)
 
 ## 📝 License
 
