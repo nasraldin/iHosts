@@ -14,7 +14,7 @@ export const PlainTextContent: React.FC = () => {
     lines.push(
       "# Hosts file managed by iHosts",
       `# Generated at ${new Date().toISOString()}`,
-      ""
+      "",
     );
 
     for (const entry of entries) {

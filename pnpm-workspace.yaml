@@ -1,4 +1,20 @@
+allowedDeprecatedVersions:
+  "@npmcli/move-file": "3.0.0"
+  "boolean": "3.2.0"
+  "gar": "1.0.4"
+  "lodash.get": "4.4.2"
+
 onlyBuiltDependencies:
   - electron
   - electron-winstaller
   - esbuild
+
+overrides:
+  "@electron/fuses": "2.0.0"
+  "@npmcli/move-file": "^3.0.0"
+  "glob": "^13.0.0"
+  "rimraf": "^6.1.2"
+  "boolean": "^3.2.0"
+  "gar": "^1.0.4"
+  "lodash.get": "^4.4.2"
+  tmp: ">=0.2.4"
