@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -51,6 +53,11 @@ jobs:
           echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "Tag name: $TAG_NAME"
 
+      - name: List build artifacts
+        run: |
+          find ./out/make/zip -name "*.zip" -type f || echo "No zip files found"
+          ls -la ./out/make/zip/darwin/ || echo "Directory not found"
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
@@ -75,9 +82,8 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ./out/make/zip/darwin/**/*.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            ./out/make/zip/darwin/x64/*.zip
+            ./out/make/zip/darwin/arm64/*.zip
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
