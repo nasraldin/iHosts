@@ -55,8 +55,14 @@ jobs:
 
       - name: List build artifacts
         run: |
-          find ./out/make/zip -name "*.zip" -type f || echo "No zip files found"
-          ls -la ./out/make/zip/darwin/ || echo "Directory not found"
+          echo "Searching for build artifacts..."
+          find ./out -name "*.zip" -type f 2>/dev/null | head -20 || echo "No zip files found"
+          echo ""
+          echo "Directory structure:"
+          ls -la ./out/make/zip/darwin/ 2>/dev/null || echo "Directory not found"
+          echo ""
+          echo "All zip files:"
+          find ./out/make/zip -name "*.zip" -type f 2>/dev/null || echo "No zip files in expected location"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -70,7 +76,6 @@ jobs:
 
             ### Downloads
 
-            - **macOS (Intel)**: Download `iHosts-darwin-x64-${{ steps.get_version.outputs.version }}.zip`
             - **macOS (Apple Silicon)**: Download `iHosts-darwin-arm64-${{ steps.get_version.outputs.version }}.zip`
 
             ### Installation
@@ -82,14 +87,12 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ./out/make/zip/darwin/x64/*.zip
-            ./out/make/zip/darwin/arm64/*.zip
+            ./out/make/zip/darwin/**/*.zip
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: macos-builds
           path: |
-            ./out/make/zip/darwin/x64/*.zip
             ./out/make/zip/darwin/arm64/*.zip
           retention-days: 30
