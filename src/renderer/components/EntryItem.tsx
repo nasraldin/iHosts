@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useHostsStore } from "../store/useHostsStore";
 import { useToast } from "./Toast";
 import type { HostEntry } from "../../types/ipc";
@@ -143,7 +143,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
   const [group, setGroup] = useState(entry.group || "");
   const { showToast } = useToast();
 
-  const handleSave = () => {
+  const handleSave = useCallback(() => {
     const hostnameList = hostnames
       .split(/\s+/)
       .map((h) => h.trim())
@@ -161,7 +161,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
       group: group || undefined,
     });
     showToast("Entry updated", "success");
-  };
+  }, [ip, hostnames, comment, group, onSave, showToast]);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -174,7 +174,7 @@ const EntryEditor: React.FC<EntryEditorProps> = ({
 
     globalThis.addEventListener("keydown", handleKeyDown);
     return () => globalThis.removeEventListener("keydown", handleKeyDown);
-  }, [ip, hostnames, comment, group]);
+  }, [handleSave, onCancel]);
 
   return (
     <div className="mt-4 p-4 bg-secondary/50 rounded-xl border border-border space-y-3 animate-in fade-in-0 slide-in-from-top-2">

@@ -6,6 +6,10 @@ A modern, elegant macOS Electron application for managing the `/etc/hosts` file 
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Version](https://img.shields.io/badge/version-1.0.0-orange)
 
+## Screenshot
+
+![Screenshot](./screenshots/iHosts.png)
+
 ## ✨ Features
 
 ### Core Functionality
@@ -57,14 +61,14 @@ A modern, elegant macOS Electron application for managing the `/etc/hosts` file 
 1. **Go to the [Releases page](https://github.com/nasraldin/iHosts/releases)**
 
 2. **Download the latest release**
-   - For macOS: Download `iHosts-1.0.0-darwin-x64.zip` (or `iHosts-1.0.0-darwin-arm64.zip` for Apple Silicon)
+   - For macOS: Download `iHosts-darwin-arm64-1.0.0.zip` for Apple Silicon
    - The file will be in your Downloads folder
 
 3. **Install the application**
 
    ```bash
    # Extract the ZIP file
-   unzip ~/Downloads/iHosts-1.0.0-darwin-x64.zip
+   unzip ~/Downloads/iHosts-darwin-arm64-1.0.0.zip
 
    # Move to Applications folder
    mv iHosts.app /Applications/

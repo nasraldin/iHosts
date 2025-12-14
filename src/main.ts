@@ -21,7 +21,7 @@ if (started) {
 const originalStderrWrite = process.stderr.write.bind(process.stderr);
 process.stderr.write = (
   chunk: string | Buffer | Uint8Array,
-  encoding?: BufferEncoding | ((error?: Error | null) => void),
+  encoding?: NodeJS.BufferEncoding | ((error?: Error | null) => void),
   callback?: (error?: Error | null) => void,
 ): boolean => {
   if (chunk) {

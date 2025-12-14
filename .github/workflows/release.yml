@@ -31,14 +31,33 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build application
-        run: pnpm run make
+        run: |
+          echo "Starting build process..."
+          set -o pipefail
+          pnpm run make 2>&1 | tee build.log || {
+            echo "Build failed or incomplete. Checking status..."
+            tail -100 build.log
+            exit 1
+          }
+          echo ""
+          echo "Build completed. Checking outputs..."
+          echo "Packaged app location:"
+          find ./out/package -name "*.app" -type d 2>/dev/null | head -5 || echo "No .app found"
+          echo ""
+          echo "ZIP files location:"
+          find ./out -name "*.zip" -type f 2>/dev/null || echo "No ZIP files found"
+          echo ""
+          echo "Full out directory structure:"
+          ls -laR ./out 2>/dev/null | head -50 || echo "No out directory"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEBUG: electron-forge:*
+          ELECTRON_FORGE_DEBUG: "1"
 
       - name: Get version from package.json
         id: get_version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(cat package.json | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
@@ -48,7 +67,8 @@ jobs:
           if [ "${{ github.ref_type }}" == "tag" ]; then
             TAG_NAME="${{ github.ref_name }}"
           else
-            TAG_NAME="v$(node -p "require('./package.json').version")"
+            VERSION=$(cat package.json | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
+            TAG_NAME="v$VERSION"
           fi
           echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "Tag name: $TAG_NAME"
@@ -63,6 +83,46 @@ jobs:
           echo ""
           echo "All zip files:"
           find ./out/make/zip -name "*.zip" -type f 2>/dev/null || echo "No zip files in expected location"
+          echo ""
+          echo "Checking for packaged app:"
+          find ./out/package -name "*.app" -type d 2>/dev/null | head -5 || echo "No .app found"
+
+      - name: Create ZIP if makers didn't run
+        run: |
+          if find ./out/make/zip -name "*.zip" -type f 2>/dev/null | grep -q .; then
+            echo "ZIP files already exist, skipping manual creation"
+            exit 0
+          fi
+          echo "Makers didn't create ZIP, creating manually..."
+          APP_PATH=$(find ./out/package -name "*.app" -type d | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app found, cannot create ZIP"
+            exit 1
+          fi
+          VERSION=$(cat package.json | grep -o '"version": "[^"]*"' | cut -d'"' -f4)
+          ARCH="arm64"
+          ZIP_NAME="iHosts-darwin-${ARCH}-${VERSION}.zip"
+          ZIP_DIR="out/make/zip/darwin/${ARCH}"
+          ZIP_PATH="${ZIP_DIR}/${ZIP_NAME}"
+          mkdir -p "$ZIP_DIR"
+          # Create ZIP - must be created from the app's parent directory to preserve structure
+          APP_DIR=$(dirname "$APP_PATH")
+          APP_NAME=$(basename "$APP_PATH")
+          cd "$APP_DIR"
+          # From ./out/package/darwin-arm64, go up 2 levels to root, then to ZIP dir
+          zip -r "../../${ZIP_PATH}" "$APP_NAME" 2>&1
+          cd "$GITHUB_WORKSPACE"
+          echo "Created ZIP: ${ZIP_PATH}"
+          if [ -f "${ZIP_PATH}" ]; then
+            ls -lh "${ZIP_PATH}"
+          else
+            echo "ERROR: ZIP file was not created at ${ZIP_PATH}"
+            echo "Current directory: $(pwd)"
+            echo "APP_DIR was: $APP_DIR"
+            echo "Checking what was created:"
+            find ./out -name "*.zip" -type f 2>/dev/null || echo "No ZIP files found"
+            exit 1
+          fi
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
