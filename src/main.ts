@@ -208,7 +208,7 @@ const createWindow = () => {
     titleBarStyle: "hiddenInset",
     backgroundColor: "#ffffff",
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload.cjs"),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
